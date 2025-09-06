@@ -21,27 +21,49 @@ const loadCategory = () => {
     });
 };
 
+
 const showCategory = (categories) => {
+  categoryContainer.innerHTML = ""; 
+
   categories.forEach((cat) => {
     categoryContainer.innerHTML += `
-            <li id="${cat.id}" class="hover:border-b-4 hover:border-red-600 border-red-600 cursor-pointer">${cat.title}</li>
-        `;
+      <li id="${cat.id}" 
+          class="hover:border-b-4 hover:border-red-600 cursor-pointer">
+          ${cat.title}
+      </li>
+    `;
   });
 
+  
   categoryContainer.addEventListener("click", (e) => {
-    const allLi = document.querySelectorAll("li");
+    const allLi = categoryContainer.querySelectorAll("li");
     allLi.forEach((li) => {
-      li.classList.remove("border-b-4");
+      li.classList.remove("border-b-4", "border-red-600");
+      li.classList.add("hover:border-b-4", "hover:border-red-600");
     });
 
     if (e.target.localName === "li") {
-      //   console.log(e.target.id);
-      showLoading()
-      e.target.classList.add("border-b-4");
+      showLoading();
+      e.target.classList.add("border-b-4", "border-red-600");
+      e.target.classList.remove("hover:border-b-4", "hover:border-red-600");
       loadNewsByCategory(e.target.id);
     }
   });
+
+  setFirstCategoryActive();
 };
+
+
+const setFirstCategoryActive = () => {
+  const firstLi = categoryContainer.querySelector("li");
+  if (firstLi) {
+    firstLi.classList.add("border-b-4", "border-red-600");
+    firstLi.classList.remove("hover:border-b-4", "hover:border-red-600");
+
+    loadNewsByCategory(firstLi.id);
+  }
+};
+
 
 const loadNewsByCategory = (categoryId) => {
   //   console.log(categoryId);
