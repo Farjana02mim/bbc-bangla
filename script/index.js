@@ -1,29 +1,49 @@
-// promise -> pending, resolve(success), reject(error)
+// DOM elements
 const categoryContainer = document.getElementById("categoryContainer");
+const dropdownItem = document.getElementById("dropdown-item");
 const newsContainer = document.getElementById("newsContainer");
 const bookmarkContainer = document.getElementById("bookmarkContainer");
-const bookmarkCount = document.getElementById('bookmarkCount')
-const newsDetailsModal = document.getElementById('news-details-modal')
-const modalContainer = document.getElementById('modalContainer')
+const bookmarkCount = document.getElementById("bookmarkCount");
+const newsDetailsModal = document.getElementById("news-details-modal");
+const modalContainer = document.getElementById("modalContainer");
 
 let bookmarks = [];
 
+// Load categories
 const loadCategory = () => {
   fetch("https://news-api-fs.vercel.app/api/categories")
     .then((res) => res.json())
     .then((data) => {
       const categories = data.categories;
-      //   console.log(categories)
       showCategory(categories);
+      dropdownItems(categories);
     })
     .catch((err) => {
       console.log(err);
     });
 };
 
+// Show categories in mobile dropdown
+const dropdownItems = (categories) => {
+  dropdownItem.innerHTML = "";
 
+  categories.forEach((cat) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<a class="cursor-pointer">${cat.title}</a>`;
+    li.dataset.id = cat.id;
+
+    li.addEventListener("click", () => {
+      showLoading();
+      loadNewsByCategory(cat.id);
+    });
+
+    dropdownItem.appendChild(li);
+  });
+};
+
+// Show categories in desktop nav
 const showCategory = (categories) => {
-  categoryContainer.innerHTML = ""; 
+  categoryContainer.innerHTML = "";
 
   categories.forEach((cat) => {
     categoryContainer.innerHTML += `
@@ -34,7 +54,7 @@ const showCategory = (categories) => {
     `;
   });
 
-  
+  // Event delegation for desktop nav
   categoryContainer.addEventListener("click", (e) => {
     const allLi = categoryContainer.querySelectorAll("li");
     allLi.forEach((li) => {
@@ -53,7 +73,7 @@ const showCategory = (categories) => {
   setFirstCategoryActive();
 };
 
-
+// Make first category active by default
 const setFirstCategoryActive = () => {
   const firstLi = categoryContainer.querySelector("li");
   if (firstLi) {
@@ -64,146 +84,129 @@ const setFirstCategoryActive = () => {
   }
 };
 
-
+// Load news by category
 const loadNewsByCategory = (categoryId) => {
-  //   console.log(categoryId);
   fetch(`https://news-api-fs.vercel.app/api/categories/${categoryId}`)
     .then((res) => res.json())
     .then((data) => {
       showNewsByCategory(data.articles);
     })
     .catch((err) => {
-       showError()
+      showError();
     });
 };
 
+// Show news list
 const showNewsByCategory = (articles) => {
-    
-    if(articles.length === 0) {
-        showEmptyMessage()
-        // alert('No news found for this category!')
-       return 
-    }
+  if (articles.length === 0) {
+    showEmptyMessage();
+    return;
+  }
+
   newsContainer.innerHTML = "";
   articles.forEach((article) => {
     newsContainer.innerHTML += `
-        <div class="border  border-gray-300 rounded-lg">
+        <div class="border border-gray-300 rounded-lg">
             <div>
-             <img src="${article.image.srcset[5].url}"/>
+             <img src="${article.image?.srcset?.[5]?.url || article.image?.url || ""}" alt="news"/>
             </div>
             <div id="${article.id}" class="p-2">
                 <h1 class="font-extrabold">${article.title}</h1>
-            <p class="text-sm">${article.time}</p>
-                 <div class="flex justify-between items-center">
-                 <button class="btn">Bookmark</button>
-                   <button class="btn">View Details</button>
-                   </div>
+                <p class="text-sm">${article.time}</p>
+                <div class="flex justify-between items-center mt-2">
+                   <button class="btn btn-sm">Bookmark</button>
+                   <button class="btn btn-sm">View Details</button>
+                </div>
             </div>
         </div>
-        `;
+    `;
   });
 };
 
+// Handle clicks inside news container
 newsContainer.addEventListener("click", (e) => {
-  // console.log(e.target)
-  // console.log(e.target.innerText)
   if (e.target.innerText === "Bookmark") {
     handleBookmarks(e);
   }
 
   if (e.target.innerText === "View Details") {
-    handleViewDetails(e)
+    handleViewDetails(e);
   }
 });
 
+// Bookmark handling
 const handleBookmarks = (e) => {
-  const title = e.target.parentNode.children[0].innerText;
-  const id = e.target.parentNode.id;
+  const parent = e.target.closest("div[id]");
+  const title = parent.querySelector("h1").innerText;
+  const id = parent.id;
 
-  bookmarks.push({
-    title: title,
-    id: id,
-  });
+  if (!bookmarks.some((b) => b.id === id)) {
+    bookmarks.push({ title, id });
+  }
 
   showBookmarks(bookmarks);
-  
 };
 
 const showBookmarks = (bookmarks) => {
-    console.log(bookmarks)
-    bookmarkContainer.innerHTML = ""
-    bookmarks.forEach(bookmark => {
-        bookmarkContainer.innerHTML += `
+  bookmarkContainer.innerHTML = "";
+  bookmarks.forEach((bookmark) => {
+    bookmarkContainer.innerHTML += `
         <div class="border my-2 p-1">
             <h1>${bookmark.title}</h1>
             <button onclick="handleDeleteBookmark('${bookmark.id}')" class="btn btn-xs">Delete</button>
         </div>
-        `
-    })
+    `;
+  });
 
-    bookmarkCount.innerText = bookmarks.length
+  bookmarkCount.innerText = bookmarks.length;
 };
 
 const handleDeleteBookmark = (bookmarkId) => {
-   const filteredBookmarks =  bookmarks.filter(bookmark => bookmark.id !== bookmarkId)
-   bookmarks = filteredBookmarks
-   showBookmarks(bookmarks)
+  bookmarks = bookmarks.filter((bookmark) => bookmark.id !== bookmarkId);
+  showBookmarks(bookmarks);
+};
 
-} 
+// News details handling
+const handleViewDetails = (e) => {
+  const id = e.target.closest("div[id]").id;
 
-handleViewDetails = (e) => {
-const id = e.target.parentNode.id;
-  
   fetch(`https://news-api-fs.vercel.app/api/news/${id}`)
-  .then(res=> res.json())
-  .then(data => {
-    console.log(data)
-    showDetailsNews(data.article)
-
-  })
-  .catch(err => {
-    console.log(err)
-  })
-
-}
+    .then((res) => res.json())
+    .then((data) => {
+      showDetailsNews(data.article);
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+};
 
 const showDetailsNews = (article) => {
-    newsDetailsModal.showModal()
-    modalContainer.innerHTML = `
-            <h1>${article.title}</h1>
-            <img src="${article.images[0].url}"/>
-            <p>${article.content.join("")}</p>
-    `
-}
+  newsDetailsModal.showModal();
+  modalContainer.innerHTML = `
+    <h1 class="font-bold text-xl mb-2">${article.title}</h1>
+    <img src="${article.images[0].url}" class="mb-3"/>
+    <p>${article.content.join(" ")}</p>
+  `;
+};
 
+// Helpers
 const showLoading = () => {
-    newsContainer.innerHTML = `
-     <div class="bg-green-600 p-3 text-white ">Loading...</div>
-    `
-}
+  newsContainer.innerHTML = `
+     <div class="bg-green-600 p-3 text-white">Loading...</div>
+  `;
+};
 
 const showError = () => {
-    newsContainer.innerHTML = `
+  newsContainer.innerHTML = `
      <div class="bg-red-600 p-3 text-white text-[20px]">Something went wrong</div>
-    `
-}
+  `;
+};
 
 const showEmptyMessage = () => {
-          newsContainer.innerHTML = `
+  newsContainer.innerHTML = `
      <div class="bg-red-600 p-3 text-white text-[20px]">No news found for this category</div>
-    `
-}
+  `;
+};
+
+// Init
 loadCategory();
-loadNewsByCategory("main");
-
-// const loadCategoryAsync = async () => {
-//   try {
-//     const res = await fetch("https://news-api-fs.vercel.app/api/categorie");
-//     const data = await res.json();
-//     console.log(data);
-//   } catch (error) {
-//     console.log(error);
-//   }
-// };
-
-// loadCategoryAsync();
